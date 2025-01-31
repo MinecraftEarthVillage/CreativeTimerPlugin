@@ -1,0 +1,18 @@
+name: CreativeTimerPlugin
+version: 1.14514
+main: earthvillage.top.CreativeTimerPlugin.CreativeTimerPlugin
+commands:
+  creativetimer:
+    aliases:
+      - ct #别名 /gmt也可以调用这个命令
+
+permissions: #四个权限 购买 启动 取消 重载
+  ct.buy:
+    default: true
+  ct.start:
+    default: true
+  ct.stop:
+    default: true
+  ct.reload:
+    default: op
+api-version: 1.20 # 这里指定了1.20版本的API
