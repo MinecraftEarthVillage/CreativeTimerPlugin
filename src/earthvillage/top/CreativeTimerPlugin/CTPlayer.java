@@ -66,7 +66,13 @@ public class CTPlayer {
         //如果时间=0
         if (duration == 0 && !CreativeTimerPlugin.允许保留物品和模式状态) {
             player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.RED + "您的创造模式时间已经结束");
-            cancel();
+            // 获取插件实例并调用清空背包但保留白名单物品方法
+            CreativeTimerPlugin plugin = (CreativeTimerPlugin) Bukkit.getPluginManager().getPlugin("CreativeTimerPlugin");
+            if (plugin != null) {
+                // 调用主类的清空背包方法，传入玩家对象
+                plugin.清空背包但保留白名单物品(player);
+            }
+          //  cancel(); //以前这个直接调用cancel的丢了
         } else if (duration == 0&& CreativeTimerPlugin.允许保留物品和模式状态) {
             cancel2();
         }
