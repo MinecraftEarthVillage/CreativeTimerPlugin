@@ -2,12 +2,12 @@ money-per-second: 10.0 #每秒花钱数
 max-time: 21600 #最多可持有时长（单位：秒）
 auto-stop: true #如果玩家在计时过程中时间内更改游戏模式，则自动停止计时，时间会保留
 
-#白名单，如果玩家背包里有这些就不要求清空背包
-whitelist:
-  - DIAMOND
-  - GOLD_INGOT
-  - IRON_SWORD
-  - STICK
+#白名单，如果玩家背包的物品带有这样的LORE就不会在清空背包的同时清空这些物品
+Lore白名单:
+  - 菜单
+  - 服务器主菜单
+  - 右键回城
+  - 。。。
 #反作弊设定开关（字面意思）
 允许使用TNT: false
 传递物品: false

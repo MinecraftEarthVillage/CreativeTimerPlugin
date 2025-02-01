@@ -23,6 +23,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -36,6 +37,7 @@ import static org.bukkit.Material.AIR;
 
 
 public class CreativeTimerPlugin extends JavaPlugin implements Listener {
+    private static CreativeTimerPlugin instance;
     private File playersFile;
     private FileConfiguration players;
     private BukkitTask timer;
@@ -48,25 +50,31 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     private int MAX_TIME;
 
 
-    //作弊开关
+    //配置文件里的作弊开关
     private boolean 传递物品;
     private boolean 允许使用TNT;
     public static boolean 允许保留物品和模式状态;
     private boolean 允许打人;
     private boolean 要求移出生存模式物品;
+
+
+    public void 读取安全配置项(){
+        传递物品 = getConfig().getBoolean("允许使用展示框",false);
+        允许使用TNT = getConfig().getBoolean("允许使用TNT",false);
+        允许保留物品和模式状态=getConfig().getBoolean("允许保留物品和模式状态",false);
+        允许打人=getConfig().getBoolean("允许打人",false);
+        要求移出生存模式物品=getConfig().getBoolean("要求移出生存模式物品",true);
+    }
     @Override
     public void onEnable() {
+        instance = this; // 将插件实例保存为单例
         if (!initEco()) {
             getServer().getConsoleSender().sendMessage(ChatColor.RED + "未检测到插件: EssentialsX和Vault, 插件卸载中（一定要三个一起用）");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
         saveDefaultConfig();
-        传递物品 = getConfig().getBoolean("允许使用展示框",false);
-        允许使用TNT = getConfig().getBoolean("允许使用TNT",false);
-        允许保留物品和模式状态=getConfig().getBoolean("允许保留物品和模式状态",false);
-        允许打人=getConfig().getBoolean("允许打人",false);
-        要求移出生存模式物品=getConfig().getBoolean("要求移出生存模式物品",true);
+        读取安全配置项();
         loadConfig();
         getServer().getPluginManager().registerEvents(this, this);
         playersFile = new File(getDataFolder(), "players.yml"); //玩家文件 用于持久化
@@ -103,36 +111,15 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
 
 
     }
-
+    public static CreativeTimerPlugin getInstance() {
+        return instance;
+    }
     @Override
     public void onDisable() {
         timer.cancel();
-        //保存玩家信息 用于持久化（还是先检查一下playMap是不是空的）
-        if (CTPlayer.playerMap.isEmpty()) {
-            System.out.println("[创造模式体验系统]playerMap 为空，无法保存玩家信息（？这一段是AI写的，我也不知道用来干嘛？）");
-        } else {
-            CTPlayer.playerMap.forEach((k, v) -> {
-                System.out.println("[创造模式体验系统]正在保存玩家信息···");
-                int dur = v.duration;
-                if (dur > 0) {
-                    players.set(k.toString(), dur);
-                } else {
-                    //没有持续时间或者玩家名非法不记录 减少硬盘消耗
-                    players.set(k.toString(), null);
-                }
-                System.out.println("[创造模式体验系统]保存玩家信息完毕···");
-            });
-        }
-        try {
-            players.save(playersFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        传递物品 = getConfig().getBoolean("传递物品");
-        允许使用TNT = getConfig().getBoolean("允许使用TNT");
-        允许保留物品和模式状态=getConfig().getBoolean("允许保留物品和模式状态");
-        允许打人=getConfig().getBoolean("允许打人");
-        要求移出生存模式物品=getConfig().getBoolean("要求移出生存模式物品");
+        //保存玩家信息 用于持久化
+        保存玩家数据();
+        读取安全配置项();
         loadConfig();
         // 获取服务器中的所有玩家，首先检查是否有在线玩家
         if (Bukkit.getServer().getOnlinePlayers().isEmpty()) {
@@ -164,8 +151,29 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
 
 
     }
-    //BOSS栏相关
-
+    //保存玩家数据的代码包装成方法了
+    public void 保存玩家数据() {
+        if (CTPlayer.playerMap.isEmpty()) {
+            System.out.println("[创造模式体验系统]playerMap 为空，无法保存玩家信息（？这一段是AI写的，我也不知道用来干嘛？）");
+        } else {
+            CTPlayer.playerMap.forEach((k, v) -> {
+                System.out.println("[创造模式体验系统]正在保存玩家信息···");
+                int dur = v.duration;
+                if (dur > 0) {
+                    players.set(k.toString(), dur);
+                } else {
+                    //没有持续时间或者玩家名非法不记录 减少硬盘消耗
+                    players.set(k.toString(), null);
+                }
+                System.out.println("[创造模式体验系统]保存玩家信息完毕···");
+            });
+        }
+        try {
+            players.save(playersFile);
+        } catch (IOException e) {                   //写入文件
+            e.printStackTrace();
+        }
+    }
     //加载经济
     private boolean initEco() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
@@ -194,14 +202,14 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
 
     //事件
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent e) {
+    public void onPlayerJoin(PlayerJoinEvent e) {//进服务器事件
         Player player = e.getPlayer();
         if (!CTPlayer.playerMap.containsKey(e.getPlayer().getUniqueId())) {
             loadPlayer(e.getPlayer());
         }
                 //允许保留物品和模式状态: false时
         if (!允许保留物品和模式状态&&player.getGameMode()==GameMode.CREATIVE && !player.isOp()) {
-            //调用隔壁cancel()方法(?)，包括切生存与清空物品栏双操作
+            //无法调用隔壁cancel()方法(?)，包括切生存与清空物品栏双操作，这里重复写了代码
             player.getInventory().clear();
             player.setGameMode(GameMode.SURVIVAL);
             player.sendMessage("§4检测到你上次退出游戏时不是OP但是处于创造模式，已恢复生存模式");
@@ -218,34 +226,54 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         }
     }
     @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent e) {
+    public void onPlayerQuit(PlayerQuitEvent e) {//退出服务器事件
+        // 当玩家退出服务器时触发此事件
 
+        // 从CTPlayer的静态映射中获取当前退出玩家的CTPlayer实例
         CTPlayer gPlayer = CTPlayer.playerMap.get(e.getPlayer().getUniqueId());
-        players.set(e.getPlayer().getUniqueId().toString(), gPlayer.duration);
-
+        // 将玩家的游戏时长保存到players映射中，键为玩家UUID的字符串形式，值为游戏时长
+        //players.set(e.getPlayer().getUniqueId().toString(), gPlayer.duration);
+        保存玩家数据();
+        // 获取退出事件的玩家对象
         Player player = e.getPlayer();
-        //允许保留物品和模式状态: false时执行
+        // 检查是否不允许保留物品和模式状态，并且玩家当前处于计时状态且不是服务器管理员
         if (!允许保留物品和模式状态 && gPlayer.isTicking && !player.isOp()) {
-            //调用隔壁cancel()方法，包括切生存与清空物品栏双操作
+            // 如果条件满足，调用gPlayer的cancel方法，该方法会取消计时并执行以下操作：
+            // 1. 将玩家模式切换回生存模式
+            // 2. 清空玩家物品栏
             gPlayer.cancel();
-            // 向全服玩家发送玩家退出的消息
+            // 向全服玩家广播消息，通知玩家退出并清空背包
             String playerName = player.getName();
             String message = playerName + "在创造模式中退出游戏，已变回生存模式并且清空了背包";
             Bukkit.broadcastMessage(ChatColor.YELLOW + message);
+        } else if (允许保留物品和模式状态 && gPlayer.isTicking && !player.isOp()) {
+            // 向全服玩家广播消息，通知玩家退出但没有清空背包
+            String playerName = player.getName();
+            String message = playerName + "在创造模式中退出游戏，但腐竹设置了“允许保留模式状态”，所以并没有恢复生存清空背包";
+            Bukkit.broadcastMessage(ChatColor.RED + message);
         }
+        // 从CTPlayer的静态映射中移除当前退出玩家的记录
         CTPlayer.playerMap.remove(e.getPlayer().getUniqueId());
     }
 
 
 
 
+    // 注解EventHandler表示该方法是一个事件处理器，用于处理特定类型的事件
     @EventHandler
     public void onGameModeChange(PlayerGameModeChangeEvent 模式改变事件) {
+        // 检查新游戏模式是否不是创造模式，并且AUTO_CANCEL变量为true
         if (!模式改变事件.getNewGameMode().equals(GameMode.CREATIVE) && AUTO_CANCEL) {
+            // 从CTPlayer的静态映射中获取当前玩家的CTPlayer实例
             CTPlayer player = CTPlayer.playerMap.get(模式改变事件.getPlayer().getUniqueId());
+            // 检查玩家是否正在计时，并且不允许保留物品和模式状态
             if (player.isTicking&&!允许保留物品和模式状态) {
+                // 取消玩家的计时
                 player.cancel();
-模式改变事件.getPlayer().sendMessage("§6哎呀！你中途切换了游戏模式，计时体验取消了");
+                // 向玩家发送消息，通知其计时体验已取消
+                模式改变事件.getPlayer().sendMessage("§6哎呀！你中途切换了游戏模式，计时体验取消了");
+                // 调用保存玩家数据的方法
+                保存玩家数据();
             }
         }
     }
@@ -335,14 +363,14 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             case "start": {
                 if (!player.isOp()) {  //先判断是不是OP，因为OP不需要这个指令
                     if (!要求移出生存模式物品 || player.getInventory().isEmpty() || isOnlyWhiteListItems(player)) {
-                        //如果不要求事先清空物品栏或者玩家背包是空的或者只有白名单物品
-                        // 玩家物品栏为空或者只含有白名单物品
-                        CTPlayer.playerMap.get(player.getUniqueId()).start();
-                        player.leaveVehicle(); // 让玩家离开车辆
+                        // 如果玩家物品栏为空，或者不要求移出物品，或者玩家物品栏只包含白名单物品
+                        CTPlayer.playerMap.get(player.getUniqueId()).start();  // 执行start方法
+                        player.leaveVehicle();  // 让玩家离开车辆
                     } else {
-                        // 玩家物品栏包含不在白名单内的东西或 要求移出生存模式物品: true
-                        player.sendMessage("§6请先将物品栏的个人物品移出后再执行该指令！（你可以留下用来打开菜单的专用道具）");
-                        player.sendMessage("§4但是在计时取消后会连同专用道具一同清空，所以尽量不要用纸菜单而是更方便的快捷键或指令");
+                        // 玩家物品栏包含不在白名单内的东西，或者要求移出生存模式物品: true
+                        player.sendMessage("§6请先将物品栏的个人物品移出后再执行该指令！（打开菜单等专用道具不会清除，可以保留）");
+                        // 你也可以根据需要显示注释行
+                        // player.sendMessage("§4但是在计时取消后会连同专用道具一同清空，所以尽量不要用纸菜单而是更方便的快捷键或指令");
                     }
                 }else{
                     player.sendMessage("§a§l你不是管理员吗？你还需要这个吗？");
@@ -351,11 +379,47 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             }
 
             case "cancel": {
-                //在配置文件里不同的开关调用不同的处理方式
+                // 判断是否允许保留物品和模式状态
+                // 如果不允许，则调用CTPlayer对象的cancel方法（并且还要忽略白名单物品）
                 if (!允许保留物品和模式状态) {
+                    // 加载插件配置文件
+                    FileConfiguration config = this.getConfig();
+
+                    // 创建一个列表来临时存储符合白名单的物品
+                    List<ItemStack> whiteListItems = new ArrayList<>();
+                        /*
+                        * 因为CTPlayer.playerMap.get(player.getUniqueId()).cancel();
+                        * 这个cancel方法不能改变，执行cancel就会全部清空背包，一视同仁，不管有没有白名单物品
+                        * 所以只能使用这个笨方法
+                        * 1.先遍历背包
+                        * 2.如果物品符合白名单条件，保存到临时列表
+                        * 3.让《铁面无私》的cancel方法清空玩家的物品
+                        * 4.将符合白名单的物品还给玩家
+                        * */
+                    // 获取玩家背包中的所有物品
+                    ItemStack[] contents = player.getInventory().getContents();
+
+                    // 遍历背包中的物品
+                    for (ItemStack item : contents) {
+                        if (item != null && isItemInWhiteList(item, config)) {
+                            // 如果物品符合白名单条件，保存到临时列表
+                            whiteListItems.add(item);
+                        }
+                    }
+
+                    // 清空玩家的物品
                     CTPlayer.playerMap.get(player.getUniqueId()).cancel();
-                }  else {
+
+                    // 将符合白名单的物品还给玩家
+                    for (ItemStack whiteListItem : whiteListItems) {
+                        player.getInventory().addItem(whiteListItem);
+                    }
+                }
+
+ else {
+                    // 如果允许保留物品和模式状态，则调用CTPlayer对象的cancel2方法
                     CTPlayer.playerMap.get(player.getUniqueId()).cancel2();
+                    // 向发送者发送消息，告知服主开启了允许保留物品栏和模式状态，背包没有清空
                     sender.sendMessage(ChatColor.AQUA + "§b服主开启了允许保留物品栏和模式状态，你的背包没有清空");
                 }
                 break;
@@ -452,21 +516,52 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         }
         return true;
     }
-//物品栏白名单
-private boolean isOnlyWhiteListItems(Player player) {
-    FileConfiguration config = this.getConfig(); // 加载插件配置文件
-    List<String> whitelist = config.getStringList("whitelist");
 
+
+//物品栏白名单
+public boolean isOnlyWhiteListItems(Player player) {
+    // 加载插件配置文件
+    FileConfiguration config = this.getConfig();
+    // 从配置文件中获取白名单的lore列表
+    List<String> whitelist = config.getStringList("Lore白名单");
+
+    // 遍历玩家背包中的所有物品
     for (ItemStack itemStack : player.getInventory().getContents()) {
+        // 如果物品不为空
         if (itemStack != null) {
-            Material material = itemStack.getType();
-            if (!whitelist.contains(material.name())) {
-                return false; // 存在不在白名单内的物品，返回 false
+            // 获取物品的物品Meta
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            if (itemMeta != null && itemMeta.hasLore()) {
+                // 获取物品的lore
+                List<String> itemLore = itemMeta.getLore();
+
+                // 如果lore不在白名单中，返回false
+                if (!whitelist.containsAll(itemLore)) {
+                    return false;
+                }
             }
         }
     }
-    return true; // 只包含白名单内的物品，返回 true
+    // 只包含lore在白名单内的物品，返回 true
+    return true;
 }
+//辅助方法，判断单个物品是否符合白名单
+public boolean isItemInWhiteList(ItemStack itemStack,FileConfiguration config) {
+    // 获取物品的物品Meta
+    if (itemStack != null && itemStack.hasItemMeta()) {
+        ItemMeta itemMeta = itemStack.getItemMeta();
+
+        // 如果物品Meta存在且有lore
+        if (itemMeta != null && itemMeta.hasLore()) {
+            List<String> itemLore = itemMeta.getLore();
+            // 这里判断该物品的lore是否在白名单中
+            return config.getStringList("Lore白名单").containsAll(itemLore);
+        }
+    }
+    return false;
+}
+
+
 
 
     @Override
@@ -482,7 +577,7 @@ private boolean isOnlyWhiteListItems(Player player) {
     //下面都是防作弊系统
     //保护程序，防止创造模式玩家乱打人(除了管理员 因为管理员永远是对的)
     @EventHandler
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {//防打非创造玩家（实体伤害事件）
         if (event.getDamager() instanceof Player && event.getEntity() instanceof Player) {
             Player attacker = (Player)event.getDamager();
             Player victim = (Player)event.getEntity();
@@ -496,7 +591,7 @@ private boolean isOnlyWhiteListItems(Player player) {
     }
 
     @EventHandler
-    public void onPlayerDropItem(PlayerDropItemEvent event) {
+    public void onPlayerDropItem(PlayerDropItemEvent event) {//防丢物品（玩家丢物品事件）
         Player player = event.getPlayer();
         ItemStack droppedItem = event.getItemDrop().getItemStack();
         //如果传递物品: false
@@ -509,67 +604,94 @@ private boolean isOnlyWhiteListItems(Player player) {
         }
     }
 //互动事件
-    //阻止放置TNT
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        Player player = event.getPlayer();
-
-        // 检查玩家是否处于创造模式
-        if (!允许使用TNT &&player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
-
-            // 检查玩家手中是否拿着TNT
+        /* 阻止放置TNT，实际上可以搭配Banitem插件实现相同效果，未来这段代码会移除吧
+        */
+        Player player = event.getPlayer(); // 获取触发事件的玩家
+        // 检查玩家是否处于创造模式且不是管理员
+        if (!允许使用TNT && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
+            // 检查玩家手中是否拿着TNT或TNT矿车
             ItemStack item = player.getItemInHand();
-            if (item != null && item.getType() == Material.TNT || item.getType() == Material.TNT_MINECART) {
-
-                // 检查玩家是否尝试放出它们
+            if (item != null && (item.getType() == Material.TNT || item.getType() == Material.TNT_MINECART)) {
+                // 检查玩家是否尝试右键点击方块或空气
                 Action action = event.getAction();
                 if (action == Action.RIGHT_CLICK_BLOCK || action == Action.RIGHT_CLICK_AIR) {
-                    event.setCancelled(true); // 取消事件，阻止放置
-                    player.sendMessage("§c干嘛？想炸图吗？我告诉你：没门（嘿嘿嘿）");
+                    event.setCancelled(true); // 取消事件，阻止放置TNT
+                    player.sendMessage("§c干嘛？想炸图吗？我告诉你：没门（嘿嘿嘿）"); // 警告玩家
                 }
             }
         }
     }
 
     // 监听容器打开事件
-    @EventHandler
+     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
+
+        /*打开容器事件，防止创造玩家偷藏物品*/
+
+         // 获取触发事件的玩家
         Player player = (Player) event.getPlayer();
+        // 获取玩家打开的物品栏所在位置的方块
         Block block = event.getView().getTopInventory().getLocation().getBlock();
+        // 获取物品栏的持有者
         InventoryHolder holder = event.getInventory().getHolder();
+        // 获取方块的材料类型
         Material blockType = block.getType();
         // 检查玩家是否处于创造模式且不是管理员并且传递物品关掉了
         if (!传递物品&&player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
             // 阻止骑乘驴或骡时打开物品栏
             if (player.getVehicle() != null && (player.getVehicle().getType() == EntityType.DONKEY || player.getVehicle().getType() == EntityType.MULE)) {
+                // 取消事件，阻止玩家打开物品栏
                 event.setCancelled(true);
+                // 发送提示消息给玩家
                 player.sendMessage("§6我知道你想干什么，不能在骑乘驴或骡时打开物品栏偷放东西！");
             }
             // 检查打开的是容器类方块
             if (block.getState() instanceof InventoryHolder ||holder instanceof ChestBoat|| holder instanceof StorageMinecart || holder instanceof HopperMinecart || blockType.toString().endsWith("_CHEST")) {
+                // 取消事件，阻止物品被打开
                 event.setCancelled(true  /*有条件成立时就取消事件，阻止物品被打开*/);
+                // 发送提示消息给玩家
                 player.sendMessage("§6我知道你想干什么，不许利用创造模式大量刷取物资"); // 发送提示消息给玩家
             }
         }
     }
     @EventHandler
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+
+        /**
+         * 与实体互动事件
+         * 一开始是阻止玩家在创造模式下使用物品展示框传递物品
+         **/
+        // 获取触发事件的玩家
         Player player = event.getPlayer();
 
-        if (!传递物品 &&!player.isOp() && player.getGameMode() == org.bukkit.GameMode.CREATIVE && event.getRightClicked() instanceof InventoryHolder) {
+        // 检查是否允许传递物品，玩家是否为管理员，以及玩家是否在创造模式，并且点击的实体是否为InventoryHolder（如箱子）
+        if (!传递物品 && !player.isOp() && player.getGameMode() == org.bukkit.GameMode.CREATIVE && event.getRightClicked() instanceof InventoryHolder) {
+            // 取消事件，阻止玩家与该实体交互
             event.setCancelled(true);
+            // 向玩家发送消息，提示不允许在创造模式下大量刷取物资
             player.sendMessage("§6我知道你想干什么，不许利用创造模式大量刷取物资");
         }
-        //锁物品展示框
-        if (!player.isOp()&& player.getGameMode() == org.bukkit.GameMode.CREATIVE&&event.getRightClicked() instanceof ItemFrame) {
-           // ItemFrame itemFrame = (ItemFrame) event.getRightClicked();
-            if (player.getInventory().getItemInOffHand().getType() !=AIR ||
-                    player.getInventory().getItemInMainHand().getType() !=AIR
-                            &&!传递物品) {
+
+        // 锁物品展示框
+        // 检查玩家是否为管理员，玩家是否在创造模式，并且点击的实体是否为ItemFrame（物品展示框）
+        // 也许可以尝试“实体黑名单”，这样还能阻止点击坐骑开箱？但是好像只有展示框有这样的特性
+
+        if (!player.isOp() && player.getGameMode() == org.bukkit.GameMode.CREATIVE && event.getRightClicked() instanceof ItemFrame) {
+            // 获取点击的物品展示框实体（注释掉的代码）
+            // ItemFrame itemFrame = (ItemFrame) event.getRightClicked();
+            // 检查玩家副手和主手是否持有物品，并且是否允许传递物品
+            if (player.getInventory().getItemInOffHand().getType() != AIR ||
+                player.getInventory().getItemInMainHand().getType() != AIR && !传递物品) {
+                // 取消事件，阻止玩家与该实体交互
                 event.setCancelled(true);
+                // 向玩家发送消息，提示不允许使用物品展示框传递物品
                 player.sendMessage("§4不要用展示框给别人传递物品！不要给新人装备");
             }
         }
+
     }
 
 /*
