@@ -153,9 +153,12 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     }
     //保存玩家数据的代码包装成方法了
     public void 保存玩家数据() {
+        /*
         if (CTPlayer.playerMap.isEmpty()) {
             System.out.println("[创造模式体验系统]playerMap 为空，无法保存玩家信息（？这一段是AI写的，我也不知道用来干嘛？）");
         } else {
+        有需要的时候启用这段
+         */
             CTPlayer.playerMap.forEach((k, v) -> {
                 System.out.println("[创造模式体验系统]正在保存玩家信息···");
                 int dur = v.duration;
@@ -167,7 +170,10 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
                 }
                 System.out.println("[创造模式体验系统]保存玩家信息完毕···");
             });
+            /*
         }
+        有需要的时候启用这段
+             */
         try {
             players.save(playersFile);
         } catch (IOException e) {                   //写入文件
@@ -241,7 +247,9 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             // 如果条件满足，调用gPlayer的cancel方法，该方法会取消计时并执行以下操作：
             // 1. 将玩家模式切换回生存模式
             // 2. 清空玩家物品栏
-            gPlayer.cancel();
+            //这里调用方法时将 player 强制转换为 CommandSender 类型
+            清空背包但保留白名单物品(player);
+            //gPlayer.cancel();
             // 向全服玩家广播消息，通知玩家退出并清空背包
             String playerName = player.getName();
             String message = playerName + "在创造模式中退出游戏，已变回生存模式并且清空了背包";
@@ -269,7 +277,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             // 检查玩家是否正在计时，并且不允许保留物品和模式状态
             if (player.isTicking&&!允许保留物品和模式状态) {
                 // 取消玩家的计时
-                player.cancel();
+                清空背包但保留白名单物品(模式改变事件.getPlayer());
                 // 向玩家发送消息，通知其计时体验已取消
                 模式改变事件.getPlayer().sendMessage("§6哎呀！你中途切换了游戏模式，计时体验取消了");
                 // 调用保存玩家数据的方法
@@ -278,6 +286,38 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    public void 清空背包但保留白名单物品(CommandSender sender){
+        Player player = (Player) sender;
+        // 加载插件配置文件
+        FileConfiguration config = this.getConfig();
+
+        // 创建一个Map来存储符合白名单的物品及其位置
+        Map<Integer, ItemStack> whiteListItemsWithSlots = new HashMap<>();
+
+        // 获取玩家背包中的所有物品
+        ItemStack[] contents = player.getInventory().getContents();
+
+        // 遍历背包中的物品
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (item != null && isItemInWhiteList(item, config)) {
+                // 如果物品符合白名单条件，保存到Map中，记录物品及其位置
+                whiteListItemsWithSlots.put(i, item);
+            }
+        }
+
+        // 清空玩家的物品
+        CTPlayer.playerMap.get(player.getUniqueId()).cancel();
+
+        // 将符合白名单的物品放回原来的位置
+        for (Map.Entry<Integer, ItemStack> entry : whiteListItemsWithSlots.entrySet()) {
+            int slot = entry.getKey();
+            ItemStack whiteListItem = entry.getValue();
+
+            // 将物品放回原来的位置
+            player.getInventory().setItem(slot, whiteListItem);
+        }
+    }
     //命令
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -382,40 +422,9 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
                 // 判断是否允许保留物品和模式状态
                 // 如果不允许，则调用CTPlayer对象的cancel方法（并且还要忽略白名单物品）
                 if (!允许保留物品和模式状态) {
-                    // 加载插件配置文件
-                    FileConfiguration config = this.getConfig();
-
-                    // 创建一个列表来临时存储符合白名单的物品
-                    List<ItemStack> whiteListItems = new ArrayList<>();
-                        /*
-                        * 因为CTPlayer.playerMap.get(player.getUniqueId()).cancel();
-                        * 这个cancel方法不能改变，执行cancel就会全部清空背包，一视同仁，不管有没有白名单物品
-                        * 所以只能使用这个笨方法
-                        * 1.先遍历背包
-                        * 2.如果物品符合白名单条件，保存到临时列表
-                        * 3.让《铁面无私》的cancel方法清空玩家的物品
-                        * 4.将符合白名单的物品还给玩家
-                        * */
-                    // 获取玩家背包中的所有物品
-                    ItemStack[] contents = player.getInventory().getContents();
-
-                    // 遍历背包中的物品
-                    for (ItemStack item : contents) {
-                        if (item != null && isItemInWhiteList(item, config)) {
-                            // 如果物品符合白名单条件，保存到临时列表
-                            whiteListItems.add(item);
-                        }
-                    }
-
-                    // 清空玩家的物品
-                    CTPlayer.playerMap.get(player.getUniqueId()).cancel();
-
-                    // 将符合白名单的物品还给玩家
-                    for (ItemStack whiteListItem : whiteListItems) {
-                        player.getInventory().addItem(whiteListItem);
-                    }
+                    //  调用方法
+                    清空背包但保留白名单物品(sender);
                 }
-
  else {
                     // 如果允许保留物品和模式状态，则调用CTPlayer对象的cancel2方法
                     CTPlayer.playerMap.get(player.getUniqueId()).cancel2();
