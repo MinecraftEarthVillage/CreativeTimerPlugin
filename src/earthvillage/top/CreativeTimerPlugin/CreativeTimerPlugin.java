@@ -344,7 +344,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             sender.sendMessage("buy：购买时间，后面接数字，单位:秒");
             return true;
         }
-        if (args[0].equals("reload") && sender.hasPermission("gmt.reload")) {
+        if (args[0].equals("reload") && sender.hasPermission("ct.reload")) {
             onDisable();
             onEnable();
             sender.sendMessage(ChatColor.AQUA + "配置重载完成");
@@ -359,7 +359,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
                 return true;
             }
             if (args.length != 3) {
-                sender.sendMessage(ChatColor.RED + "用法: /gmt " + args[0] + " <时长，单位:秒> <玩家名>");
+                sender.sendMessage(ChatColor.RED + "用法: /ct " + args[0] + " <时长，单位:秒> <玩家名>");
                 return true;
             }
             int time;
@@ -444,7 +444,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             }
             case "buy": {
                 if (args.length != 2) {
-                    player.sendMessage(ChatColor.RED + "用法: /gmt buy <时长，单位:秒>");
+                    player.sendMessage(ChatColor.RED + "用法: /ct buy <时长，单位:秒>");
                     break;
                 }
                 int time;
@@ -475,7 +475,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             }
             case "give": {
                 if (args.length != 3) {
-                    sender.sendMessage(ChatColor.RED + "用法: /gmt give <时长，单位:秒> <玩家名>");
+                    sender.sendMessage(ChatColor.RED + "用法: /ct give <时长，单位:秒> <玩家名>");
                     break;
                 }
                 int time;
@@ -506,7 +506,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             }
             case "set": {
                 if (args.length != 3) {
-                    sender.sendMessage(ChatColor.RED + "用法: /gmt set <时长，单位:秒> <玩家名>");
+                    sender.sendMessage(ChatColor.RED + "用法: /ct set <时长，单位:秒> <玩家名>");
                     break;
                 }
                 int time;
