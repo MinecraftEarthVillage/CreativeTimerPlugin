@@ -59,7 +59,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
 
 
     public void 读取安全配置项(){
-        传递物品 = getConfig().getBoolean("允许使用展示框",false);
+        传递物品 = getConfig().getBoolean("传递物品",false);
         允许使用TNT = getConfig().getBoolean("允许使用TNT",false);
         允许保留物品和模式状态=getConfig().getBoolean("允许保留物品和模式状态",false);
         允许打人=getConfig().getBoolean("允许打人",false);
