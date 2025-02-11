@@ -38,6 +38,7 @@ import static org.bukkit.Material.AIR;
 
 public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     private static CreativeTimerPlugin instance;
+    private Command 指令类;
     private File playersFile;
     private FileConfiguration players;
     private BukkitTask timer;
@@ -108,7 +109,6 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             //如果有一条不满足就播下面这条
             this.getLogger().info(ChatColor.RED+"[创造模式体验系统]保护程序没有彻底启用，创造模式玩家可能会出现作弊现象");
         }
-
 
     }
     public static CreativeTimerPlugin getInstance() {
@@ -345,7 +345,8 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             return true;
         }
         if (args[0].equals("reload") && sender.hasPermission("gmt.reload")) {
-            loadConfig();
+            onDisable();
+            onEnable();
             sender.sendMessage(ChatColor.AQUA + "配置重载完成");
             Bukkit.broadcastMessage(ChatColor.YELLOW + "[创造模式体验系统]刚刚插件重载了一下");
             return true;
@@ -627,7 +628,8 @@ public boolean isItemInWhiteList(ItemStack itemStack,FileConfiguration config) {
         /* 阻止放置TNT，实际上可以搭配Banitem插件实现相同效果，未来这段代码会移除吧
         */
         Player player = event.getPlayer(); // 获取触发事件的玩家
-        // 检查玩家是否处于创造模式且不是管理员
+
+        // 如果不允许使用TNT，玩家处于创造模式，且玩家不是OP，则执行以下代码
         if (!允许使用TNT && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
             // 检查玩家手中是否拿着TNT或TNT矿车
             ItemStack item = player.getItemInHand();
