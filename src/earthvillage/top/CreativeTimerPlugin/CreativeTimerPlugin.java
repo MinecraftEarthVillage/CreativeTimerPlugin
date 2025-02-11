@@ -120,7 +120,6 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         //保存玩家信息 用于持久化
         保存玩家数据();
         读取安全配置项();
-        loadConfig();
         // 获取服务器中的所有玩家，首先检查是否有在线玩家
         if (Bukkit.getServer().getOnlinePlayers().isEmpty()) {
             System.out.println("[创造模式体验系统]没有在线玩家");
@@ -188,9 +187,13 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     //模块化 易于reload重载
     private void loadConfig() {
         reloadConfig();
+        // 获取配置文件中的money-per-second参数，如果没有设置则默认为10.0
         MONEY_PER_SEC = getConfig().getDouble("money-per-second", 10.0);
+        // 获取配置文件中的max-time参数，如果没有设置则默认为300
         MAX_TIME = getConfig().getInt("max-time", 300);
+        // 获取配置文件中的auto-cancel参数，如果没有设置则默认为true
         AUTO_CANCEL = getConfig().getBoolean("auto-cancel", true);
+        // 获取配置文件中的允许保留物品和模式状态参数，如果没有设置则默认为false
         允许保留物品和模式状态 = getConfig().getBoolean("允许保留物品和模式状态", false);
     }
     private void loadPlayer(Player player) {
@@ -342,12 +345,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             return true;
         }
         if (args[0].equals("reload") && sender.hasPermission("gmt.reload")) {
-            //loadConfig();     //旧的重载方式
-            onDisable();
-            sender.sendMessage(ChatColor.AQUA + "关闭插件···");
-            sender.sendMessage(ChatColor.AQUA + "已关闭");
-            onEnable();
-            sender.sendMessage(ChatColor.AQUA + "启动插件···");
+            loadConfig();
             sender.sendMessage(ChatColor.AQUA + "配置重载完成");
             Bukkit.broadcastMessage(ChatColor.YELLOW + "[创造模式体验系统]刚刚插件重载了一下");
             return true;
