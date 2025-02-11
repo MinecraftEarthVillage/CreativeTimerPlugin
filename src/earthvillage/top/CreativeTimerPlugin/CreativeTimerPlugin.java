@@ -240,8 +240,11 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         保存玩家数据();
         // 从CTPlayer的静态映射中获取当前退出玩家的CTPlayer实例
         CTPlayer gPlayer = CTPlayer.playerMap.get(e.getPlayer().getUniqueId());
-        // 将玩家的游戏时长保存到players映射中，键为玩家UUID的字符串形式，值为游戏时长
-        //players.set(e.getPlayer().getUniqueId().toString(), gPlayer.duration);
+        // 添加空值检查
+        if (gPlayer == null) {
+            CTPlayer.playerMap.remove(e.getPlayer().getUniqueId());
+            return;
+        }
         // 获取退出事件的玩家对象
         Player player = e.getPlayer();
         // 检查是否不允许保留物品和模式状态，并且玩家当前处于计时状态且不是服务器管理员
