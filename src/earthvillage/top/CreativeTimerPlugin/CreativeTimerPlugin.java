@@ -127,25 +127,17 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         } else {
             for (Player player : Bukkit.getServer().getOnlinePlayers()) {
                 System.out.println("[创造模式体验系统]正在获取是否有人保留了模式···");
-                //   允许保留物品和模式状态是不是开着的
-                if ( !允许保留物品和模式状态) {
+                //   无论允许保留物品和模式状态是不是开着的都要先取消玩家的创造模式，要不然出BUG
+
                     //检查玩家是否处于创造模式且不是管理员
                     if (player.getGameMode() == GameMode.CREATIVE && !player.isOp() ){
                         // 将玩家设为生存模式
                         player.setGameMode(GameMode.SURVIVAL);
+
                         System.out.println("[创造模式体验系统]已恢复玩家为生存");
                     }
 
-                } else {
-                    this.getLogger().info(ChatColor.RED + "检测到你没有禁用“允许保留物品和模式状态”，他们将一直保留创造模式的状态，不建议");
-                    //播报配置文件
-                    System.out.println("======这是你的配置项======");
-                    getLogger().info("允许使用TNT: " + 允许使用TNT +"（推荐值：false）");
-                    getLogger().info("允许保留物品和模式状态: " + 允许保留物品和模式状态 +"（推荐值：false）");
-                    getLogger().info("允许打人: " + 允许打人 +"（推荐值：false）");
-                    getLogger().info("传递物品: " + 传递物品 +"（推荐值：false）");
-                    getLogger().info("要求移出生存模式物品: " + 要求移出生存模式物品 +"（推荐值：true）");
-                }
+
             }
         }//这段代码同样是防止有人逃脱监管卡进永久创造模式的
 
