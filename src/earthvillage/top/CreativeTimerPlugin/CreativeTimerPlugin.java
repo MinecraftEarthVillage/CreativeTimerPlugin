@@ -152,22 +152,30 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     }
     //保存玩家数据的代码包装成方法了
     public void 保存玩家数据() {
-        CTPlayer.playerMap.forEach((k, v) -> {
-            System.out.println("[创造模式体验系统]正在保存玩家信息···");
-            int dur = v.duration;
-            if (dur > 0) {//只有非0时间才会被记录，防止yml文件里一堆0秒数据……
-                // 保存为嵌套结构
-                players.set(k.toString() + ".time", dur);
-                players.set(k.toString() + ".name", v.player.getName());
-            } else {
-                // 清除无效数据
-                players.set(k.toString(), null);
-            }
-            System.out.println("[创造模式体验系统]保存玩家信息完毕···");
-        });
+        /*
+        if (CTPlayer.playerMap.isEmpty()) {
+            System.out.println("[创造模式体验系统]playerMap 为空，无法保存玩家信息（？这一段是AI写的，我也不知道用来干嘛？）");
+        } else {
+        有需要的时候启用这段
+         */
+            CTPlayer.playerMap.forEach((k, v) -> {
+                System.out.println("[创造模式体验系统]正在保存玩家信息···");
+                int dur = v.duration;
+                if (dur > 0) {
+                    players.set(k.toString(), dur);
+                } else {
+                    //没有持续时间或者玩家名非法不记录 减少硬盘消耗
+                    players.set(k.toString(), null);
+                }
+                System.out.println("[创造模式体验系统]保存玩家信息完毕···");
+            });
+            /*
+        }
+        有需要的时候启用这段
+             */
         try {
             players.save(playersFile);
-        } catch (IOException e) {
+        } catch (IOException e) {                   //写入文件
             e.printStackTrace();
         }
     }
@@ -197,26 +205,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
         允许保留物品和模式状态 = getConfig().getBoolean("允许保留物品和模式状态", false);
     }
     private void loadPlayer(Player player) {
-        String uuidStr = player.getUniqueId().toString();
-        int time = 0;
-
-        // 检查旧格式（UUID直接对应时间）
-        if (players.isInt(uuidStr)) {
-            // 读取旧数据并迁移到新格式
-            time = players.getInt(uuidStr, 0);
-            players.set(uuidStr + ".time", time);
-            players.set(uuidStr + ".name", player.getName());
-            players.set(uuidStr, null); // 删除旧条目
-            try {
-                players.save(playersFile); // 保存迁移后的数据
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            // 读取新格式的时间
-            time = players.getInt(uuidStr + ".time", 0);
-        }
-
+        int time = players.getInt(player.getUniqueId().toString(), 0);
         new CTPlayer(player, time);
     }
 
@@ -248,11 +237,12 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {//退出服务器事件
         // 当玩家退出服务器时触发此事件
-        保存玩家数据();
+
         // 从CTPlayer的静态映射中获取当前退出玩家的CTPlayer实例
         CTPlayer gPlayer = CTPlayer.playerMap.get(e.getPlayer().getUniqueId());
         // 将玩家的游戏时长保存到players映射中，键为玩家UUID的字符串形式，值为游戏时长
         //players.set(e.getPlayer().getUniqueId().toString(), gPlayer.duration);
+        保存玩家数据();
         // 获取退出事件的玩家对象
         Player player = e.getPlayer();
         // 检查是否不允许保留物品和模式状态，并且玩家当前处于计时状态且不是服务器管理员
