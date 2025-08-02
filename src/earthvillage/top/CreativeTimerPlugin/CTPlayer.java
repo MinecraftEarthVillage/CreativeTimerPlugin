@@ -58,25 +58,40 @@ public class CTPlayer {
     }
 
 
+    private int tickCount = 0; // 添加计数器
+
     public void tick() {
         duration--;
-        // BOSS栏显示倒计时
-        sendActionBarMessage(player, ChatColor.GREEN + "§l创造模式体验 剩余时间: " + duration);
+        tickCount++;
 
-        //如果时间=0
-        if (duration == 0 && !CreativeTimerPlugin.允许保留物品和模式状态) {
-            player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.RED + "您的创造模式时间已经结束");
-            // 获取插件实例并调用清空背包但保留白名单物品方法
-            CreativeTimerPlugin plugin = (CreativeTimerPlugin) Bukkit.getPluginManager().getPlugin("CreativeTimerPlugin");
-            if (plugin != null) {
-                // 调用主类的清空背包方法，传入玩家对象
-                plugin.清空背包但保留白名单物品(player);
-            }
-          //  cancel(); //以前这个直接调用cancel的丢了
-        } else if (duration == 0&& CreativeTimerPlugin.允许保留物品和模式状态) {
-            cancel2();
+        // 安全获取插件实例
+        CreativeTimerPlugin plugin = CreativeTimerPlugin.getInstance();
+        if (plugin == null) {
+            // 插件未加载时安全回退
+            player.sendMessage("§c插件状态异常，请通知管理员");
+            return;
         }
 
+        // 获取配置的更新间隔（带默认值）
+        int updateInterval = plugin.getConfig().getInt("性能.每秒计数栏更新", 5);
+        if (updateInterval < 1) updateInterval = 5; // 防止无效配置
+
+        // 条件更新：达到间隔或最后5秒时更新
+        boolean shouldUpdate = (tickCount % updateInterval == 0) || (duration <= 5);
+
+        if (shouldUpdate) {
+            sendActionBarMessage(player, ChatColor.GREEN + "§l创造模式体验 剩余时间: " + duration);
+        }
+
+        // 倒计时结束处理
+        if (duration <= 0) {
+            if (!CreativeTimerPlugin.允许保留物品和模式状态) {
+                plugin.清空背包但保留白名单物品(player);
+            } else {
+                cancel2();
+            }
+            removeBossBar(player);
+        }
     }
     public void start() {
         if (isTicking) {
