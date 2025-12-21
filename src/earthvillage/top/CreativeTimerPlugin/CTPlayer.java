@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.UUID;
 
 public class CTPlayer {
-    private UUID playerUUID;
 
     // 其他属性和方法
 
@@ -22,7 +21,6 @@ public class CTPlayer {
         this.duration = duration;
     }
     public static Map<UUID, CTPlayer> playerMap = new HashMap<>();
-    GameMode def = GameMode.SURVIVAL;
     Player player;
     int duration;
     boolean isTicking;
@@ -104,7 +102,6 @@ public class CTPlayer {
             player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.RED + "你没有创造模式体验时间，请先购买");
         } else {
             isTicking = true;
-            def = player.getGameMode();
             player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.YELLOW + "§l已开启创造计时");
         //    player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.RED + "注意：为防止刷物品，计时结束将§l§n清空背包§r，这就是为什么要提前保存生存模式重要物品的原因");
         //    player.sendMessage("§l§6[创造模式体验系统]§r" + ChatColor.RED + "注意：禁止利用创造模式权限进行任何大规模破坏性活动！一经发现，永久封禁！！！");
