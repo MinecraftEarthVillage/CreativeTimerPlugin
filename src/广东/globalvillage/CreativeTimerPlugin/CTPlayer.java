@@ -1,4 +1,4 @@
-package earthvillage.top.CreativeTimerPlugin;
+package 广东.globalvillage.CreativeTimerPlugin;
 
 
 import org.bukkit.Bukkit;

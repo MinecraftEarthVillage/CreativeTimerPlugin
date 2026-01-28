@@ -1,6 +1,6 @@
 name: CreativeTimerPlugin
 version: 1.14514
-main: earthvillage.top.CreativeTimerPlugin.CreativeTimerPlugin
+main: 广东.globalvillage.CreativeTimerPlugin.CreativeTimerPlugin
 commands:
   creativetimer:
     aliases:
