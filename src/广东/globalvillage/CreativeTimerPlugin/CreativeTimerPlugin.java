@@ -191,6 +191,7 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
     private void loadPlayer(Player player) {
         String uuidStr = player.getUniqueId().toString();
         int time = 0;
+        boolean needSave = false;
 
         // 检查旧格式（UUID直接对应时间）
         if (players.isInt(uuidStr)) {
@@ -199,14 +200,27 @@ public class CreativeTimerPlugin extends JavaPlugin implements Listener {
             players.set(uuidStr + ".time", time);
             players.set(uuidStr + ".name", player.getName());
             players.set(uuidStr, null); // 删除旧条目
-            try {
-                players.save(playersFile); // 保存迁移后的数据
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            needSave = true;
         } else {
             // 读取新格式的时间
             time = players.getInt(uuidStr + ".time", 0);
+        }
+
+        // 检查并更新名称（如果缺失或不同）
+        String storedName = players.getString(uuidStr + ".name");
+        if (storedName == null || !player.getName().equals(storedName)) {
+            players.set(uuidStr + ".name", player.getName());
+            needSave = true;
+        }
+
+        // 如果需要保存，统一执行一次
+        if (needSave) {
+            try {
+                players.save(playersFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+                getLogger().warning("无法保存玩家 " + player.getName() + " 的数据：" + e.getMessage());
+            }
         }
 
         new CTPlayer(player, time);
